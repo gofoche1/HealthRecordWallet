@@ -14,6 +14,11 @@ contract HealthWalletConsent {
 
     uint public documentCount;
 
+    modifier onlyPatient(uint docId) { //who is calling has to = who owns the document
+        require(documents[docId].patient == msg.sender, "Not the patient");
+        _;
+    }
+
     function addDocument(address _patient, string memory _hash) public { //just adds a new document to the contract
 
         documents[documentCount] = Document(_patient, _hash);
@@ -21,12 +26,12 @@ contract HealthWalletConsent {
         documentCount++;
     }
 
-    function grantAccess(uint docId, address provider) public { //..grants access
+    function grantAccess(uint docId, address provider) public onlyPatient(docId) { //..grants access
 
         access[docId][provider] = true;
     }
 
-    function revokeAccess(uint docId, address provider) public { //revokes access...
+    function revokeAccess(uint docId, address provider) public onlyPatient(docId){ //revokes access...
         access[docId][provider] = false;
     }
 
