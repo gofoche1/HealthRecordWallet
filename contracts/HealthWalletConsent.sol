@@ -8,9 +8,15 @@ contract HealthWalletConsent {
         string hash;
     }
 
+struct Access {
+
+    bool granted;
+    uint expiry;
+}
+
     mapping(uint => Document) public documents; //stores documents by number
 
-    mapping(uint => mapping(address => bool)) public access;
+    mapping(uint => mapping(address => Access)) public access;
 
     uint public documentCount;
 
@@ -26,17 +32,19 @@ contract HealthWalletConsent {
         documentCount++;
     }
 
-    function grantAccess(uint docId, address provider) public onlyPatient(docId) { //..grants access
+    function grantAccess(uint docId, address provider, uint expiry) public onlyPatient(docId) { //..grants access
 
-        access[docId][provider] = true;
+        access[docId][provider] = Access(true, expiry);
     }
 
     function revokeAccess(uint docId, address provider) public onlyPatient(docId){ //revokes access...
-        access[docId][provider] = false;
+        access[docId][provider].granted = false;
     }
 
     function checkAccess(uint docId, address provider) public view returns (bool) { //returns whether the provider has access
 
-        return access[docId][provider];
+        Access memory a=access[docId][provider];
+
+        return a.granted && a.expiry >block.timestamp;
     }
 }
