@@ -8,11 +8,15 @@ contract HealthWalletConsent {
         string hash;
     }
 
-struct Access {
+    struct Access {
 
-    bool granted;
-    uint expiry;
-}
+        bool granted;
+        uint expiry;
+    }
+
+    event DocumentAdded (uint docId, address patient, string hash);
+    event AccessGranted (uint docId, address provider,uint expiry);
+    event AccessRevoked(uint docId, address provider);
 
     mapping(uint => Document) public documents; //stores documents by number
 
@@ -28,17 +32,21 @@ struct Access {
     function addDocument(address _patient, string memory _hash) public { //just adds a new document to the contract
 
         documents[documentCount] = Document(_patient, _hash);
-
+        emit DocumentAdded(documentCount, _patient, _hash);
         documentCount++;
     }
 
     function grantAccess(uint docId, address provider, uint expiry) public onlyPatient(docId) { //..grants access
 
         access[docId][provider] = Access(true, expiry);
+        emit AccessGranted(docId, provider, expiry);
+
     }
 
     function revokeAccess(uint docId, address provider) public onlyPatient(docId){ //revokes access...
         access[docId][provider].granted = false;
+        emit AccessRevoked(docId, provider);
+
     }
 
     function checkAccess(uint docId, address provider) public view returns (bool) { //returns whether the provider has access
