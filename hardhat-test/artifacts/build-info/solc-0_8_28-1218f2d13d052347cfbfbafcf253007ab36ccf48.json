@@ -1,0 +1,40 @@
+{
+  "_format": "hh3-sol-build-info-1",
+  "id": "solc-0_8_28-1218f2d13d052347cfbfbafcf253007ab36ccf48",
+  "solcVersion": "0.8.28",
+  "solcLongVersion": "0.8.28+commit.7893614a",
+  "compilerType": "solc",
+  "userSourceNameMap": {
+    "contracts/Counter.sol": "project/contracts/Counter.sol",
+    "contracts/HealthWalletConsent.sol": "project/contracts/HealthWalletConsent.sol"
+  },
+  "input": {
+    "language": "Solidity",
+    "settings": {
+      "evmVersion": "cancun",
+      "outputSelection": {
+        "*": {
+          "": [
+            "ast"
+          ],
+          "*": [
+            "abi",
+            "evm.bytecode",
+            "evm.deployedBytecode",
+            "evm.methodIdentifiers",
+            "metadata"
+          ]
+        }
+      },
+      "remappings": []
+    },
+    "sources": {
+      "project/contracts/Counter.sol": {
+        "content": "// SPDX-License-Identifier: UNLICENSED\npragma solidity ^0.8.28;\n\ncontract Counter {\n  uint public x;\n\n  event Increment(uint by);\n\n  function inc() public {\n    x++;\n    emit Increment(1);\n  }\n\n  function incBy(uint by) public {\n    require(by > 0, \"incBy: increment should be positive\");\n    x += by;\n    emit Increment(by);\n  }\n}\n"
+      },
+      "project/contracts/HealthWalletConsent.sol": {
+        "content": "// SPDX-License-Identifier: MIT\r\npragma solidity ^0.8.20;\r\n\r\ncontract HealthWalletConsent {\r\n\r\n    struct Document { // a document has 2 pieces of info: patient and hash\r\n        address patient;\r\n        string hash;\r\n    }\r\n\r\n    mapping(uint => Document) public documents; //stores documents by number\r\n\r\n    mapping(uint => mapping(address => bool)) public access;\r\n\r\n    uint public documentCount;\r\n\r\n    function addDocument(address _patient, string memory _hash) public { //just adds a new document to the contract\r\n\r\n        documents[documentCount] = Document(_patient, _hash);\r\n\r\n        documentCount++;\r\n    }\r\n\r\n    function grantAccess(uint docId, address provider) public { //..grants access\r\n\r\n        access[docId][provider] = true;\r\n    }\r\n\r\n    function revokeAccess(uint docId, address provider) public { //revokes access...\r\n        access[docId][provider] = false;\r\n    }\r\n\r\n    function checkAccess(uint docId, address provider) public view returns (bool) { //returns whether the provider has access\r\n\r\n        return access[docId][provider];\r\n    }\r\n}"
+      }
+    }
+  }
+}
