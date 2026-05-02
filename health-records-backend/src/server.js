@@ -1,15 +1,11 @@
+import dotenv from "dotenv";
+dotenv.config();
+
 import express from "express";
 import cors from "cors";
-import dotenv from "dotenv";
 import uploadRoutes from "./routes/upload.js";
+import consentRoutes from "./routes/consent.js";
 import { connectMongo } from "./config/db.mongo.js";
-
-connectMongo().catch((err) => {
-  console.error("MongoDB connection error:", err);
-  process.exit(1);
-});
-
-dotenv.config();
 
 const app = express();
 
@@ -21,10 +17,22 @@ app.get("/health", (_req, res) => {
 });
 
 app.use("/api", uploadRoutes);
+app.use("/api/consent", consentRoutes);
 
 const port = process.env.PORT || 5000;
-app.listen(port, () => {
-  console.log(`Server running on http://localhost:${port}`);
-});
 
+async function startServer() {
+  try {
+    await connectMongo();
+    console.log("MongoDB connected");
 
+    app.listen(port, () => {
+      console.log(`Server running on http://localhost:${port}`);
+    });
+  } catch (err) {
+    console.error("MongoDB connection error:", err);
+    process.exit(1);
+  }
+}
+
+startServer();
