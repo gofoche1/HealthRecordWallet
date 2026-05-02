@@ -5,7 +5,9 @@ import express from "express";
 import cors from "cors";
 import uploadRoutes from "./routes/upload.js";
 import consentRoutes from "./routes/consent.js";
+import recordRoutes from "./routes/records.js";
 import { connectMongo } from "./config/db.mongo.js";
+
 
 const app = express();
 
@@ -18,6 +20,7 @@ app.get("/health", (_req, res) => {
 
 app.use("/api", uploadRoutes);
 app.use("/api/consent", consentRoutes);
+app.use("/api/records", recordRoutes);
 
 const port = process.env.PORT || 5000;
 

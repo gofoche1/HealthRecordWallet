@@ -3,6 +3,7 @@ import Consent from "../models/Consent.js";
 
 const router = express.Router();
 
+
 router.post("/grant", async (req, res) => {
   try {
     const { patientId, granteeId, recordId, expiresAt } = req.body;
@@ -26,6 +27,7 @@ router.post("/grant", async (req, res) => {
     });
   }
 });
+
 router.post("/revoke", async (req, res) => {
   try {
     const { consentId } = req.body;
@@ -35,6 +37,7 @@ router.post("/revoke", async (req, res) => {
       { status: "revoked" },
       { new: true }
     );
+  
 
     if (!consent) {
       return res.status(404).json({ error: "Consent not found" });
@@ -51,4 +54,33 @@ router.post("/revoke", async (req, res) => {
     });
   }
 });
+
+router.get("/check", async (req, res) => {
+  try {
+    const { granteeId, recordId } = req.query;
+
+    const consent = await Consent.findOne({
+      granteeId,
+      recordId,
+      status: "granted",
+      $or: [
+        { expiresAt: { $exists: false } },
+        { expiresAt: null },
+        { expiresAt: { $gt: new Date() } },
+      ],
+    });
+
+    return res.status(200).json({
+      hasAccess: !!consent,
+      consent,
+    });
+  } catch (error) {
+    return res.status(500).json({
+      error: "Failed to check access",
+      details: error.message,
+    });
+  }
+});
+
+
 export default router;
