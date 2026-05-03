@@ -2,16 +2,15 @@ import mongoose from "mongoose";
 
 const consentSchema = new mongoose.Schema(
   {
-    patientId: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "User",
+      patientId: {
+      type: String,
       required: true,
     },
     granteeId: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "User",
+      type: String,
       required: true,
     },
+
     recordId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Record",
@@ -19,8 +18,8 @@ const consentSchema = new mongoose.Schema(
     },
     status: {
       type: String,
-      enum: ["granted", "revoked", "expired"],
-      default: "granted",
+      enum: ["pending", "granted", "revoked", "expired"],
+      default: "pending",
     },
     expiresAt: { type: Date },
   },

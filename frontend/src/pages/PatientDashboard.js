@@ -4,95 +4,155 @@ import { useNavigate } from 'react-router-dom';
 import './Dashboard.css';
 
 
-const MOCK_RECORDS = [
-  {
-    id: 'rec_001',
-    name: 'Blood Panel Report',
-    type: 'Lab Result',
-    date: '2025-04-01',
-    provider: 'Dr. Reynolds',
-    cid: 'QmXoypizjW3WknFiJnKLwHCnL72vedxjQkDDP1mXWo6uco',
-    hash: '0x3a4f...b91c',
-    encrypted: true,
-    accessGranted: false,
-  },
-  {
-    id: 'rec_002',
-    name: 'Chest X-Ray',
-    type: 'Imaging',
-    date: '2025-03-22',
-    provider: 'City Medical Center',
-    cid: 'QmT78zSuBmuS4z925WZfrqQ1qHaJ56DQaTfyMUF7F8ff5o',
-    hash: '0x7d2a...e45f',
-    encrypted: true,
-    accessGranted: true,
-    accessExpiry: '2025-05-01',
-    grantedTo: '0xAbCd...1234',
-  },
-  {
-    id: 'rec_003',
-    name: 'Cardiology Consultation Notes',
-    type: 'Clinical Note',
-    date: '2025-02-14',
-    provider: 'Dr. Osei-Bonsu',
-    cid: 'QmRfW6Jze4WMBaFg93J8t2k3PZXy5NhGV7dHRg4WdXtCA',
-    hash: '0x9e1b...c72d',
-    encrypted: true,
-    accessGranted: false,
-  },
-];
-
-// Mock access requests from providers
-const MOCK_REQUESTS = [
-  {
-    id: 'req_001',
-    provider: 'Dr. Angela Kim',
-    providerAddress: '0xDef0...5678',
-    recordName: 'Blood Panel Report',
-    recordId: 'rec_001',
-    requestedAt: '2025-04-10',
-    status: 'pending',
-  },
-];
-
-
 function shortenAddress(addr) {
   return addr ? `${addr.slice(0, 6)}...${addr.slice(-4)}` : '';
 }
 
 export default function PatientDashboard() {
-  const { account, isConnected, signer, grantAccess, revokeAccess } = useWallet();
+  const { account, isConnected } = useWallet();
   const navigate = useNavigate();
 
-  const [records, setRecords]     = useState(MOCK_RECORDS);
-  const [requests, setRequests]   = useState(MOCK_REQUESTS);
-  const [activeTab, setActiveTab] = useState('records'); // 'records' | 'requests' | 'history'
-  const [txStatus, setTxStatus]   = useState(null);      // feedback for blockchain tx
+  const [records, setRecords] = useState([]);
+  const [requests, setRequests] = useState([]);
+  const [activeTab, setActiveTab] = useState("records");
+  const [txStatus, setTxStatus] = useState(null);
+  const [history, setHistory] = useState([]);
 
-  // Guard: redirect to landing if wallet disconnected
+  const API_BASE_URL = "http://localhost:5050";
+  const PATIENT_ID = "64f123abc123abc123abc123";
+
   useEffect(() => {
-    if (!isConnected) navigate('/');
+    if (!isConnected) navigate("/");
   }, [isConnected, navigate]);
 
-  
- const handleGrant = async (recordId, requestId, providerAddress) => {
-  setTxStatus({ type: 'loading', msg: 'Sending transaction to blockchain…' });
+  useEffect(() => {
+    async function fetchRequests() {
+      try {
+        const res = await fetch(`${API_BASE_URL}/api/consent/requests/${PATIENT_ID}`);
+        const data = await res.json();
+
+        const mappedRequests = data.requests.map(req => ({
+          id: req._id,
+          provider: "Provider",
+          providerAddress: req.granteeId,
+          recordName: req.recordId?.title || "Health Record",
+          recordId: req.recordId?._id || req.recordId,
+          requestedAt: new Date(req.createdAt).toISOString().split("T")[0],
+          status: req.status,
+        }));
+
+        setRequests(mappedRequests);
+      } catch (err) {
+        console.error("Failed to fetch requests", err);
+      }
+    }
+
+    fetchRequests();
+  }, []);
+useEffect(() => {
+  async function fetchRecords() {
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/records/${PATIENT_ID}`);
+      const data = await res.json();
+
+      const mappedRecords = data.records.map(record => ({
+        id: record._id,
+        name: record.title,
+        type: record.recordType,
+        date: new Date(record.createdAt).toISOString().split("T")[0],
+        provider: "Provider",
+        cid: record.encryptedFileCid,
+        hash: record.encryptedFileCid.slice(0, 16) + "...",
+        encrypted: true,
+        accessGranted: false,
+      }));
+
+      setRecords(mappedRecords);
+    } catch (err) {
+      console.error("Failed to fetch records", err);
+    }
+  }
+
+  fetchRecords();
+}, []);
+useEffect(() => {
+  async function fetchHistory() {
+    const res = await fetch(`${API_BASE_URL}/api/consent/history/${PATIENT_ID}`);
+    const data = await res.json();
+
+    const mappedHistory = data.history.map(item => ({
+      id: item._id,
+      status: item.status,
+      recordName: item.recordId?.title || "Health Record",
+      providerAddress: item.granteeId,
+      date: new Date(item.updatedAt).toISOString().split("T")[0],
+    }));
+
+    setHistory(mappedHistory);
+  }
+
+  fetchHistory();
+}, []);
+  const handleGrant = async (recordId, requestId, providerAddress) => {
+    setTxStatus({ type: "loading", msg: "Approving access request…" });
+
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/consent/approve`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ consentId: requestId }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.details || data.error || "Approval failed");
+      }
+
+      setRequests(prev =>
+        prev.map(req =>
+          req.id === requestId ? { ...req, status: "granted" } : req
+        )
+      );
+
+      setTxStatus({ type: "success", msg: "✓ Access approved successfully." });
+    } catch (err) {
+      setTxStatus({ type: "error", msg: `Approval failed: ${err.message}` });
+    }
+
+    setTimeout(() => setTxStatus(null), 4000);
+  };
+
+  const handleDeny = async (requestId) => {
+  setTxStatus({ type: "loading", msg: "Denying access request…" });
+
   try {
-    // recordId doubles as docId for demo (0, 1, 2...)
-    const docId = records.findIndex(r => r.id === recordId);
-    await grantAccess(docId, providerAddress);  // ← real contract call
+    const res = await fetch(`${API_BASE_URL}/api/consent/deny`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ consentId: requestId }),
+    });
+
+    const data = await res.json();
+
+    if (!res.ok) {
+      throw new Error(data.details || data.error || "Deny failed");
+    }
 
     setRequests(prev =>
-      prev.map(req => req.id === requestId ? { ...req, status: 'approved' } : req)
+      prev.map(req =>
+        req.id === requestId ? { ...req, status: "revoked" } : req
+      )
     );
-    setTxStatus({ type: 'success', msg: '✓ Access granted on-chain. Transaction confirmed.' });
+
+    setTxStatus({ type: "success", msg: "Access request denied." });
   } catch (err) {
-    setTxStatus({ type: 'error', msg: `Transaction failed: ${err.message}` });
+    setTxStatus({ type: "error", msg: `Deny failed: ${err.message}` });
   }
+
   setTimeout(() => setTxStatus(null), 4000);
 };
-
-  const handleRevoke = async (recordId, providerAddress) => {
+  /*const handleRevoke = async (recordId, providerAddress) => {
   setTxStatus({ type: 'loading', msg: 'Revoking access on blockchain…' });
   try {
     const docId = records.findIndex(r => r.id === recordId);
@@ -110,7 +170,7 @@ export default function PatientDashboard() {
   }
   setTimeout(() => setTxStatus(null), 4000);
 };
-
+*/
   return (
     <div className="dashboard-wrapper">
       <div className="bg-grid" />
@@ -241,12 +301,15 @@ export default function PatientDashboard() {
                         >
                           Approve & Grant Access
                         </button>
-                        <button className="btn-action btn-danger">
+                          <button
+                      className="btn-action btn-danger"
+                        onClick={() => handleDeny(req.id)}>
+                
                           Deny
                         </button>
                       </>
                     ) : (
-                      <span className={`status-pill ${req.status === 'approved' ? 'status-green' : 'status-red'}`}>
+                      <span className={`status-pill ${req.status === 'granted' ? 'status-green' : 'status-red'}`}>
                         {req.status.charAt(0).toUpperCase() + req.status.slice(1)}
                       </span>
                     )}
@@ -271,11 +334,27 @@ export default function PatientDashboard() {
                   <th>Status</th>
                 </tr>
               </thead>
-              <tbody>
-                <HistoryRow action="GRANTED"  record="Chest X-Ray" party="0xAbCd...1234" date="2025-03-22" tx="0xf3a2...99cc" status="confirmed" />
-                <HistoryRow action="REVOKED"  record="MRI Scan"    party="0x12Ab...ef56" date="2025-02-01" tx="0x8b1d...3300" status="confirmed" />
-                <HistoryRow action="GRANTED"  record="Blood Panel" party="0xDef0...5678" date="2025-01-15" tx="0xa9c4...7711" status="confirmed" />
-              </tbody>
+            <tbody>
+              {history.length === 0 ? (
+                <tr>
+                  <td colSpan="6" style={{ textAlign: "center", padding: "1rem" }}>
+                    No consent history yet
+                  </td>
+                </tr>
+              ) : (
+                history.map(req => (
+                  <HistoryRow
+                    key={req.id}
+                    action={req.status === "granted" ? "GRANTED" : req.status.toUpperCase()}
+                    record={req.recordName}
+                    party={req.providerAddress}
+                    date={req.date}
+                    tx="Backend"
+                    status={req.status}
+                  />
+                ))
+              )}
+            </tbody>
             </table>
           </div>
         )}

@@ -1,31 +1,7 @@
-
 import React, { useState, useEffect } from 'react';
 import { useWallet } from '../context/WalletContext';
 import { useNavigate } from 'react-router-dom';
 import './Dashboard.css';
-
-const MOCK_MY_UPLOADS = [
-  {
-    id: 'up_001',
-    name: 'Patient Lab Report — J. Harris',
-    patientAddress: '0x8f4a...9d23',
-    date: '2025-04-05',
-    cid: 'QmXoypizjW3WknFiJnKLwHCnL72vedxjQkDDP1mXWo6uco',
-    hash: '0x3a4f...b91c',
-    size: '1.2 MB',
-    accessStatus: 'pending',
-  },
-  {
-    id: 'up_002',
-    name: 'Radiology: Chest CT Scan',
-    patientAddress: '0x2c1b...7e44',
-    date: '2025-03-30',
-    cid: 'QmT78zSuBmuS4z925WZfrqQ1qHaJ56DQaTfyMUF7F8ff5o',
-    hash: '0x7d2a...e45f',
-    size: '8.7 MB',
-    accessStatus: 'approved',
-  },
-];
 
 function shortenAddress(addr) {
   return addr ? `${addr.slice(0, 6)}...${addr.slice(-4)}` : '';
@@ -35,32 +11,80 @@ export default function ProviderDashboard() {
   const { account, isConnected, accessMap, refreshAccess, provider } = useWallet();
   const navigate = useNavigate();
 
-  const [uploads, setUploads]         = useState(MOCK_MY_UPLOADS);
-  const [activeTab, setActiveTab]     = useState('upload'); // 'upload' | 'records' | 'access'
-  const [txStatus, setTxStatus]       = useState(null);
+  const [uploads, setUploads] = useState([]);
+  const [activeTab, setActiveTab] = useState('upload'); // 'upload' | 'records' | 'access'
+  const [txStatus, setTxStatus] = useState(null);
 
   // Upload form state
-  const [uploadFile, setUploadFile]   = useState(null);
+  const [uploadFile, setUploadFile] = useState(null);
   const [patientAddr, setPatientAddr] = useState('');
-  const [docType, setDocType]         = useState('Lab Result');
-  const [uploading, setUploading]     = useState(false);
+  const [docType, setDocType] = useState('Lab Result');
+  const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
 
   
-  useEffect(() => {
-  if (!provider || uploads.length === 0) return;
 
-  uploads.forEach((upload, index) => {
-    refreshAccess(index, account, provider);
-  });
-}, [provider, uploads]);
+  // ---- Helpers ----
+  function Stat({ label, value, color }) {
+    return (
+      <div className={`stat-box stat-${color}`}>
+        <span className="stat-value">{value}</span>
+        <span className="stat-label">{label}</span>
+      </div>
+    );
+  }
+
+  function MetaRow({ icon, label, mono }) {
+    return (
+      <div className="meta-row">
+        <span className="meta-icon">{icon}</span>
+        <span className={`meta-label ${mono ? 'mono' : ''}`}>{label}</span>
+      </div>
+    );
+  }
+
+  useEffect(() => {
+    if (!provider || uploads.length === 0) return;
+    // temp: on load, check access for all uploads and update state
+    /* uploads.forEach((upload, index) => {
+      refreshAccess(index, account, provider);
+    });*/
+  }, [provider, uploads]);
 
   // Guard
   useEffect(() => {
     if (!isConnected) navigate('/');
   }, [isConnected, navigate]);
 
-  
+  useEffect(() => {
+    async function fetchUploads() {
+      try {
+        const API_BASE_URL = "http://localhost:5050";
+        const userId = "64f123abc123abc123abc123";
+
+        const res = await fetch(`${API_BASE_URL}/api/records/${userId}`);
+        const data = await res.json();
+
+        const mapped = data.records.map(record => ({
+          id: record._id,
+          name: record.title,
+          patientAddress: record.userId,
+          date: new Date(record.createdAt).toISOString().split("T")[0],
+          cid: record.encryptedFileCid,
+          hash: record.encryptedFileCid.slice(0, 16) + "...",
+          size: (record.fileSize / 1024 / 1024).toFixed(2) + " MB",
+          accessStatus: "pending",
+        }));
+
+        setUploads(mapped);
+      } catch (err) {
+        console.error("Failed to fetch uploads", err);
+      }
+    }
+
+    fetchUploads();
+  }, []);
+
   const handleUpload = async (e) => {
     e.preventDefault();
     if (!uploadFile || !patientAddr) return;
@@ -69,51 +93,44 @@ export default function ProviderDashboard() {
     setUploadProgress(0);
 
     try {
-      // ============================================================
-      // WEEK 2 — Replace simulation with real API call:
-      //
-      // const formData = new FormData();
-      // formData.append('file', uploadFile);
-      // formData.append('patientAddress', patientAddr);
-      // formData.append('docType', docType);
-      //
-      // const response = await fetch('http://localhost:3001/upload', {
-      //   method: 'POST',
-      //   body: formData,
-      // });
-      // const { cid, hash } = await response.json();
-      //
-      // Then store hash on-chain (Week 3):
-      // const tx = await contract.storeDocumentHash(hash, patientAddr);
-      // await tx.wait();
-      //
-      // ============================================================
+      const API_BASE_URL = "http://localhost:5050";
 
-      // Simulated progress
-      for (let i = 0; i <= 100; i += 20) {
-        await new Promise(r => setTimeout(r, 200));
-        setUploadProgress(i);
+      const formData = new FormData();
+      formData.append("file", uploadFile);
+      formData.append("userId", patientAddr);
+      formData.append("title", uploadFile.name);
+
+      const response = await fetch(`${API_BASE_URL}/api/upload`, {
+        method: "POST",
+        body: formData,
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.details || data.error || "Upload failed");
       }
 
+      setUploadProgress(100);
+
       const newUpload = {
-        id: `up_${Date.now()}`,
-        name: uploadFile.name,
-        patientAddress: patientAddr,
-        date: new Date().toISOString().split('T')[0],
-        cid: 'QmSimulated' + Math.random().toString(36).slice(2, 14),
-        hash: '0x' + Math.random().toString(16).slice(2, 10) + '...' + Math.random().toString(16).slice(2, 6),
-        size: (uploadFile.size / 1024 / 1024).toFixed(2) + ' MB',
-        accessStatus: 'pending',
+        id: data.record._id,
+        name: data.record.title,
+        patientAddress: data.record.userId,
+        date: new Date(data.record.createdAt).toISOString().split("T")[0],
+        cid: data.record.encryptedFileCid,
+        hash: data.record.encryptedFileCid.slice(0, 16) + "...",
+        size: (data.record.fileSize / 1024 / 1024).toFixed(2) + " MB",
+        accessStatus: "pending",
       };
+
       setUploads(prev => [newUpload, ...prev]);
-
-      setTxStatus({ type: 'success', msg: '✓ File encrypted, uploaded to IPFS, hash stored on-chain.' });
+      setTxStatus({ type: "success", msg: "✓ File encrypted and uploaded to IPFS." });
       setUploadFile(null);
-      setPatientAddr('');
-      setActiveTab('records');
-
+      setPatientAddr("");
+      setActiveTab("records");
     } catch (err) {
-      setTxStatus({ type: 'error', msg: `Upload failed: ${err.message}` });
+      setTxStatus({ type: "error", msg: `Upload failed: ${err.message}` });
     } finally {
       setUploading(false);
       setUploadProgress(0);
@@ -121,17 +138,76 @@ export default function ProviderDashboard() {
     }
   };
 
-  // Request access from patient
-  const handleRequestAccess = async (uploadId, patientAddress) => {
-    setTxStatus({ type: 'loading', msg: 'Sending access request…' });
+  const handleRequestAccess = async (uploadId, patientId) => {
+    setTxStatus({ type: "loading", msg: "Sending access request…" });
+
     try {
-      // WEEK 3: POST /request-access
-      await new Promise(r => setTimeout(r, 1200));
-      setTxStatus({ type: 'success', msg: '✓ Access request sent to patient.' });
+      const res = await fetch("http://localhost:5050/api/consent/request", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          patientId: patientId,
+          granteeId: account.toLowerCase(),
+          recordId: uploadId,
+        }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.details || data.error || "Request failed");
+      }
+
+      setTxStatus({ type: "success", msg: "✓ Access request sent to patient." });
     } catch (err) {
-      setTxStatus({ type: 'error', msg: err.message });
+      setTxStatus({ type: "error", msg: `Request failed: ${err.message}` });
     }
+
     setTimeout(() => setTxStatus(null), 4000);
+  };
+
+const refreshBackendAccessStatus = async () => {
+  try {
+    const providerWallet = account.toLowerCase();
+    
+    const updatedUploads = await Promise.all(
+      uploads.map(async (up) => {
+        const res = await fetch(
+          `http://localhost:5050/api/consent/check?granteeId=${providerWallet}&recordId=${up.id}`
+        );
+
+        const data = await res.json();
+
+        return {
+          ...up,
+          accessStatus: data.hasAccess ? "granted" : "pending",
+        };
+      })
+    );
+
+    setUploads(updatedUploads);
+  } catch (err) {
+    console.error("Failed to refresh access status", err);
+  }
+};
+
+useEffect(() => {
+  if (!account || uploads.length === 0) return;
+
+  refreshBackendAccessStatus();
+}, [account, uploads.length]);
+    const getStatusLabel = (status) => {
+    if (status === "granted") return "Granted";
+    if (status === "pending") return "Pending";
+    if (status === "revoked") return "Revoked";
+    return status;
+  };
+
+  const getStatusClass = (status) => {
+    if (status === "granted") return "status-green";
+    if (status === "pending") return "status-amber";
+    if (status === "revoked") return "status-red";
+    return "status-amber";
   };
 
   return (
@@ -149,9 +225,9 @@ export default function ProviderDashboard() {
             </p>
           </div>
           <div className="stats-row">
-            <Stat label="Uploads"  value={uploads.length} color="green" />
-            <Stat label="Approved" value={uploads.filter(u=>u.accessStatus==='approved').length} color="cyan" />
-            <Stat label="Pending"  value={uploads.filter(u=>u.accessStatus==='pending').length}  color="amber" />
+            <Stat label="Uploads" value={uploads.length} color="green" />
+            <Stat label="Granted" value={uploads.filter(u => u.accessStatus === 'granted').length} color="cyan" />
+            <Stat label="Pending" value={uploads.filter(u => u.accessStatus === 'pending').length} color="amber" />
           </div>
         </div>
 
@@ -166,9 +242,9 @@ export default function ProviderDashboard() {
         {/* Tabs */}
         <div className="tabs fade-up delay-1">
           {[
-            { key: 'upload',  label: 'Upload Document' },
+            { key: 'upload', label: 'Upload Document' },
             { key: 'records', label: 'My Uploads' },
-            { key: 'access',  label: 'Access Status' },
+            { key: 'access', label: 'Access Status' },
           ].map(t => (
             <button
               key={t.key}
@@ -268,10 +344,10 @@ export default function ProviderDashboard() {
               {/* Pipeline explainer */}
               <div className="pipeline-steps">
                 {[
-                  { step: '1', label: 'AES-256 Encrypt',   icon: '🔐' },
-                  { step: '2', label: 'Upload to IPFS',    icon: '📦' },
-                  { step: '3', label: 'Store Hash On-Chain',icon: '⛓' },
-                  { step: '4', label: 'Patient Notified',  icon: '🔔' },
+                  { step: '1', label: 'AES-256 Encrypt', icon: '🔐' },
+                  { step: '2', label: 'Upload to IPFS', icon: '📦' },
+                  { step: '3', label: 'Store Hash On-Chain', icon: '⛓' },
+                  { step: '4', label: 'Patient Notified', icon: '🔔' },
                 ].map((s, i) => (
                   <React.Fragment key={s.step}>
                     <div className="pipe-step">
@@ -286,16 +362,17 @@ export default function ProviderDashboard() {
           </div>
         )}
 
+
         {/* Tab: Uploads */}
         {activeTab === 'records' && (
           <div className="records-grid fade-up delay-2">
-            {uploads.map(up => (
+            {uploads.map((up, index) => (
               <div key={up.id} className="record-card">
                 <div className="record-card-top">
                   <span className="record-type-badge">Upload</span>
-                  <span className={`status-pill ${accessMap[index]?.[account] === true ? 'status-green' : 'status-amber'}`}>
-                    {up.accessStatus === 'approved' ? 'Access Approved' : 'Pending Approval'}
-                  </span>
+                 <span className={`status-pill ${up.accessStatus === "granted" ? "status-green" : "status-amber"}`}>
+                 {up.accessStatus === "granted" ? "Granted" : "Pending"}
+                </span>
                 </div>
                 <h3 className="record-name">{up.name}</h3>
                 <div className="record-meta">
@@ -306,7 +383,7 @@ export default function ProviderDashboard() {
                   <MetaRow icon="💾" label={`Size: ${up.size}`} />
                 </div>
                 <div className="record-actions">
-                  {up.accessStatus !== 'approved' && (
+                  {up.accessStatus !== 'granted' && (
                     <button
                       className="btn-action btn-primary-green"
                       onClick={() => handleRequestAccess(up.id, up.patientAddress)}
@@ -315,7 +392,7 @@ export default function ProviderDashboard() {
                     </button>
                   )}
                   <button className="btn-action btn-outline"
-                            onClick={() => window.open(`https://ipfs.io/ipfs/${record.cid}`, '_blank')}
+                    onClick={() => window.open(`https://ipfs.io/ipfs/${up.cid}`, '_blank')}
                   >
                     View on IPFS
                   </button>
@@ -328,6 +405,14 @@ export default function ProviderDashboard() {
         {/* Tab: Access status */}
         {activeTab === 'access' && (
           <div className="history-table-wrapper fade-up delay-2">
+            <button
+              className="btn-action btn-primary-green"
+              onClick={refreshBackendAccessStatus}
+              style={{ marginBottom: "1rem" }}
+            >
+              Refresh Access Status
+            </button>
+
             <table className="history-table mono">
               <thead>
                 <tr>
@@ -338,15 +423,18 @@ export default function ProviderDashboard() {
                   <th>Status</th>
                 </tr>
               </thead>
+
               <tbody>
                 {uploads.map(u => (
                   <tr key={u.id}>
                     <td>{u.name}</td>
                     <td>{u.patientAddress}</td>
-                    <td style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{u.cid.slice(0, 18)}…</td>
+                    <td style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                      {u.cid.slice(0, 18)}…
+                    </td>
                     <td>{u.date}</td>
                     <td>
-                      <span className={`status-pill ${u.accessStatus === 'approved' ? 'status-green' : 'status-amber'}`}>
+                      <span className={`status-pill ${u.accessStatus === 'granted' ? 'status-green' : 'status-amber'}`}>
                         {u.accessStatus}
                       </span>
                     </td>
@@ -360,21 +448,4 @@ export default function ProviderDashboard() {
     </div>
   );
 }
-
-// ---- Helpers ----
-function Stat({ label, value, color }) {
-  return (
-    <div className={`stat-box stat-${color}`}>
-      <span className="stat-value">{value}</span>
-      <span className="stat-label">{label}</span>
-    </div>
-  );
-}
-function MetaRow({ icon, label, mono }) {
-  return (
-    <div className="meta-row">
-      <span className="meta-icon">{icon}</span>
-      <span className={`meta-label ${mono ? 'mono' : ''}`}>{label}</span>
-    </div>
-  );
-}
+       

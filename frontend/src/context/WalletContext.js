@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
 import { ethers } from 'ethers';
 import ABI from '../contracts/HealthWalletABI.json';
-const  CONTRACT_ADDRESS = " 0xe9d9739a3797C747761610345840859B0C0e8ff2";
+const  CONTRACT_ADDRESS = "0xe9d9739a3797C747761610345840859B0C0e8ff2";
 const WalletContext = createContext(null);
 
 export function WalletProvider({ children }) {
