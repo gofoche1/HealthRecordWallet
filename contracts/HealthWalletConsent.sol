@@ -25,11 +25,15 @@ contract HealthWalletConsent {
     uint public documentCount;
 
     modifier onlyPatient(uint docId) { //who is calling has to = who owns the document
+        require(docId < documentCount, "document does not exist");
         require(documents[docId].patient == msg.sender, "Not the patient");
         _;
     }
 
     function addDocument(address _patient, string memory _hash) public { //just adds a new document to the contract
+
+        require(_patient != address(0), "Invalid patient address");
+        require(bytes(_hash).length > 0, "Hash required");
 
         documents[documentCount] = Document(_patient, _hash);
         emit DocumentAdded(documentCount, _patient, _hash);
@@ -37,6 +41,9 @@ contract HealthWalletConsent {
     }
 
     function grantAccess(uint docId, address provider, uint expiry) public onlyPatient(docId) { //..grants access
+
+        require(provider != address(0), "Invalid provider address");
+        require(expiry > block.timestamp, "Expiry must be in the future");
 
         access[docId][provider] = Access(true, expiry);
         emit AccessGranted(docId, provider, expiry);
