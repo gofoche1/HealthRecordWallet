@@ -39,29 +39,16 @@ export function WalletProvider({ children }) {
   }, [getContract]);
 
   // Grant access — called from Patient dashboard
-  const grantAccess = useCallback(async (docId, providerAddress) => {
-    if (!signer) throw new Error('Wallet not connected');
-    const contract = getContract(signer);
-    const tx = await contract.grantAccess(docId, providerAddress);
-    await tx.wait(); // wait for block confirmation
-    // Update shared state immediately
-    setAccessMap(prev => ({
-      ...prev,
-      [docId]: { ...(prev[docId] || {}), [providerAddress]: true }
-    }));
-  }, [signer, getContract]);
+ const grantAccess = async (docId, provider) => {
+  const tx = await contract.grantAccess(docId, provider);
+  await tx.wait();
+};
 
   // Revoke access — called from Patient dashboard
-  const revokeAccess = useCallback(async (docId, providerAddress) => {
-    if (!signer) throw new Error('Wallet not connected');
-    const contract = getContract(signer);
-    const tx = await contract.revokeAccess(docId, providerAddress);
-    await tx.wait();
-    setAccessMap(prev => ({
-      ...prev,
-      [docId]: { ...(prev[docId] || {}), [providerAddress]: false }
-    }));
-  }, [signer, getContract]);
+  const revokeAccess = async (docId, provider) => {
+  const tx = await contract.revokeAccess(docId, provider);
+  await tx.wait();
+};
 
   const connectWallet = useCallback(async (selectedRole) => {
     setError(null);
@@ -97,17 +84,42 @@ export function WalletProvider({ children }) {
     });
   }
 
-  const value = {
-    account, provider, signer, network,
-    loading, error, role,
-    accessMap,        // ← both dashboards read this
-    grantAccess,      // ← Patient calls this
-    revokeAccess,     // ← Patient calls this
-    refreshAccess,    // ← Provider calls this to check status
-    connectWallet, disconnectWallet,
+
+
+  const addDocument = useCallback(async (patientAddress, cid) => {
+  if (!signer) throw new Error("Wallet not connected");
+
+  const contract = getContract(signer);
+
+  const currentCount = await contract.documentCount();
+  const tx = await contract.addDocument(patientAddress, cid);
+  await tx.wait();
+
+  return Number(currentCount);
+}, [signer, getContract]);
+
+
+    const value = {
+    account,
+    provider,
+    signer,
+    network,
+    loading,
+    error,
+    role,
+    accessMap,
+    grantAccess,
+    revokeAccess,
+    refreshAccess,
+    addDocument,
+    connectWallet,
+    disconnectWallet,
     isConnected: !!account,
   };
 
+ /* return Number(currentCount);
+}, [signer, getContract]);
+*/
   return <WalletContext.Provider value={value}>{children}</WalletContext.Provider>;
 }
 

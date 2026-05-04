@@ -9,7 +9,7 @@ function shortenAddress(addr) {
 }
 
 export default function PatientDashboard() {
-  const { account, isConnected } = useWallet();
+  const { account, isConnected, grantAccess } = useWallet();
   const navigate = useNavigate();
 
   const [records, setRecords] = useState([]);
@@ -17,7 +17,7 @@ export default function PatientDashboard() {
   const [activeTab, setActiveTab] = useState("records");
   const [txStatus, setTxStatus] = useState(null);
   const [history, setHistory] = useState([]);
-
+  
   const API_BASE_URL = "http://localhost:5050";
   const PATIENT_ID = "64f123abc123abc123abc123";
 
@@ -56,16 +56,17 @@ useEffect(() => {
       const data = await res.json();
 
       const mappedRecords = data.records.map(record => ({
-        id: record._id,
-        name: record.title,
-        type: record.recordType,
-        date: new Date(record.createdAt).toISOString().split("T")[0],
-        provider: "Provider",
-        cid: record.encryptedFileCid,
-        hash: record.encryptedFileCid.slice(0, 16) + "...",
-        encrypted: true,
-        accessGranted: false,
-      }));
+      id: record._id,
+      docId: record.docId,
+      name: record.title,
+      type: record.recordType,
+      date: new Date(record.createdAt).toISOString().split("T")[0],
+      provider: "Provider",
+      cid: record.encryptedFileCid,
+      hash: record.encryptedFileCid.slice(0, 16) + "...",
+      encrypted: true,
+      accessGranted: false,
+    }));
 
       setRecords(mappedRecords);
     } catch (err) {
@@ -93,35 +94,50 @@ useEffect(() => {
 
   fetchHistory();
 }, []);
-  const handleGrant = async (recordId, requestId, providerAddress) => {
-    setTxStatus({ type: "loading", msg: "Approving access request…" });
 
-    try {
-      const res = await fetch(`${API_BASE_URL}/api/consent/approve`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ consentId: requestId }),
-      });
+ const handleGrant = async (recordId, requestId, providerAddress) => {
+  setTxStatus({ type: "loading", msg: "Approving access request…" });
 
-      const data = await res.json();
+  try {
+    // 1. Backend approval
+    const res = await fetch(`${API_BASE_URL}/api/consent/approve`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ consentId: requestId }),
+    });
 
-      if (!res.ok) {
-        throw new Error(data.details || data.error || "Approval failed");
-      }
+    const data = await res.json();
 
-      setRequests(prev =>
-        prev.map(req =>
-          req.id === requestId ? { ...req, status: "granted" } : req
-        )
-      );
-
-      setTxStatus({ type: "success", msg: "✓ Access approved successfully." });
-    } catch (err) {
-      setTxStatus({ type: "error", msg: `Approval failed: ${err.message}` });
+    if (!res.ok) {
+      throw new Error(data.details || data.error || "Approval failed");
     }
 
-    setTimeout(() => setTxStatus(null), 4000);
-  };
+    // 2. Blockchain approval
+    const record = records.find(r => r.id === recordId);
+
+    if (record?.docId !== undefined && providerAddress) {
+      await grantAccess(record.docId, providerAddress);
+    } else {
+      console.warn("Missing blockchain docId or providerAddress", {
+        record,
+        providerAddress,
+      });
+    }
+
+    // 3. Update UI
+    setRequests(prev =>
+      prev.map(req =>
+        req.id === requestId ? { ...req, status: "granted" } : req
+      )
+    );
+
+    setTxStatus({ type: "success", msg: "✓ Access approved successfully." });
+  } catch (err) {
+    setTxStatus({ type: "error", msg: `Approval failed: ${err.message}` });
+  }
+
+  setTimeout(() => setTxStatus(null), 4000);
+};
 
   const handleDeny = async (requestId) => {
   setTxStatus({ type: "loading", msg: "Denying access request…" });
@@ -297,7 +313,7 @@ useEffect(() => {
                       <>
                         <button
                           className="btn-action btn-primary"
-                          onClick={() => handleGrant(req.recordId, req.id)}
+                          onClick={() => handleGrant(req.recordId, req.id, req.providerAddress)}
                         >
                           Approve & Grant Access
                         </button>

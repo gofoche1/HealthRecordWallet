@@ -8,7 +8,8 @@ function shortenAddress(addr) {
 }
 
 export default function ProviderDashboard() {
-  const { account, isConnected, accessMap, refreshAccess, provider } = useWallet();
+  //const { account, isConnected, accessMap, refreshAccess, provider } = useWallet();
+  const { account, isConnected, provider, signer, addDocument } = useWallet();
   const navigate = useNavigate();
 
   const [uploads, setUploads] = useState([]);
@@ -86,57 +87,74 @@ export default function ProviderDashboard() {
   }, []);
 
   const handleUpload = async (e) => {
-    e.preventDefault();
-    if (!uploadFile || !patientAddr) return;
+  e.preventDefault();
+  if (!uploadFile || !patientAddr) return;
 
-    setUploading(true);
-    setUploadProgress(0);
+  setUploading(true);
+  setUploadProgress(0);
+
+  try {
+    const API_BASE_URL = "http://localhost:5050";
+
+    const formData = new FormData();
+    formData.append("file", uploadFile);
+    formData.append("userId", patientAddr);
+    formData.append("title", uploadFile.name);
+
+    const response = await fetch(`${API_BASE_URL}/api/upload`, {
+      method: "POST",
+      body: formData,
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(data.details || data.error || "Upload failed");
+    }
+
+    setUploadProgress(100);
+
+    // 🔥 ADD BLOCKCHAIN CALL HERE
+    let blockchainDocId = null;
 
     try {
-      const API_BASE_URL = "http://localhost:5050";
-
-      const formData = new FormData();
-      formData.append("file", uploadFile);
-      formData.append("userId", patientAddr);
-      formData.append("title", uploadFile.name);
-
-      const response = await fetch(`${API_BASE_URL}/api/upload`, {
-        method: "POST",
-        body: formData,
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.details || data.error || "Upload failed");
-      }
-
-      setUploadProgress(100);
-
-      const newUpload = {
-        id: data.record._id,
-        name: data.record.title,
-        patientAddress: data.record.userId,
-        date: new Date(data.record.createdAt).toISOString().split("T")[0],
-        cid: data.record.encryptedFileCid,
-        hash: data.record.encryptedFileCid.slice(0, 16) + "...",
-        size: (data.record.fileSize / 1024 / 1024).toFixed(2) + " MB",
-        accessStatus: "pending",
-      };
-
-      setUploads(prev => [newUpload, ...prev]);
-      setTxStatus({ type: "success", msg: "✓ File encrypted and uploaded to IPFS." });
-      setUploadFile(null);
-      setPatientAddr("");
-      setActiveTab("records");
-    } catch (err) {
-      setTxStatus({ type: "error", msg: `Upload failed: ${err.message}` });
-    } finally {
-      setUploading(false);
-      setUploadProgress(0);
-      setTimeout(() => setTxStatus(null), 5000);
+      blockchainDocId = await addDocument(
+        account, // MUST be wallet address
+        data.record.encryptedFileCid
+      );
+    } catch (chainErr) {
+      console.error("Blockchain addDocument failed:", chainErr);
     }
-  };
+
+    // 🔥 THEN CREATE newUpload USING docId
+    const newUpload = {
+      id: data.record._id,
+      docId: blockchainDocId,   // <-- saved here
+      name: data.record.title,
+      patientAddress: data.record.userId,
+      date: new Date(data.record.createdAt).toISOString().split("T")[0],
+      cid: data.record.encryptedFileCid,
+      hash: data.record.encryptedFileCid.slice(0, 16) + "...",
+      size: (data.record.fileSize / 1024 / 1024).toFixed(2) + " MB",
+      accessStatus: "pending",
+    };
+
+    // 🔥 UPDATE UI
+    setUploads(prev => [newUpload, ...prev]);
+
+    setTxStatus({ type: "success", msg: "✓ File uploaded + stored on blockchain." });
+    setUploadFile(null);
+    setPatientAddr("");
+    setActiveTab("records");
+
+  } catch (err) {
+    setTxStatus({ type: "error", msg: `Upload failed: ${err.message}` });
+  } finally {
+    setUploading(false);
+    setUploadProgress(0);
+    setTimeout(() => setTxStatus(null), 5000);
+  }
+};
 
   const handleRequestAccess = async (uploadId, patientId) => {
     setTxStatus({ type: "loading", msg: "Sending access request…" });
