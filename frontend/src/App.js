@@ -1,9 +1,4 @@
 // src/App.js
-// Root of the app. Sets up:
-//  - WalletProvider (global wallet state via Context API)
-//  - React Router (client-side navigation)
-//  - Route definitions
-
 import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { WalletProvider, useWallet } from './context/WalletContext';
@@ -12,42 +7,43 @@ import Landing from './pages/Landing';
 import PatientDashboard from './pages/PatientDashboard';
 import ProviderDashboard from './pages/ProviderDashboard';
 
-// ProtectedRoute: redirects to landing if wallet not connected
-function ProtectedRoute({ children }) {
-  const { isConnected } = useWallet();
-  return isConnected ? children : <Navigate to="/" replace />;
+// ProtectedRoute: checks connection AND role
+function ProtectedRoute({ children, requiredRole }) {
+  const { isConnected, role } = useWallet();
+
+  if (!isConnected) return <Navigate to="/" replace />;
+  if (requiredRole && role !== requiredRole) return <Navigate to="/" replace />;
+
+  return children;
 }
 
-// AppRoutes is a separate component so it can use useWallet (inside Provider)
 function AppRoutes() {
   return (
     <>
       <Navbar />
       <Routes>
-        {/* Public landing/login page */}
         <Route path="/" element={<Landing />} />
 
-        {/* Patient portal — requires wallet connection */}
+        {/* Patient portal — requires patient role */}
         <Route
           path="/patient"
           element={
-            <ProtectedRoute>
+            <ProtectedRoute requiredRole="patient">
               <PatientDashboard />
             </ProtectedRoute>
           }
         />
 
-        {/* Provider portal — requires wallet connection */}
+        {/* Provider portal — requires provider role */}
         <Route
           path="/provider"
           element={
-            <ProtectedRoute>
+            <ProtectedRoute requiredRole="provider">
               <ProviderDashboard />
             </ProtectedRoute>
           }
         />
 
-        {/* Catch-all — redirect unknown URLs to home */}
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </>

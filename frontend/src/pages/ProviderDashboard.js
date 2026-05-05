@@ -114,7 +114,7 @@ export default function ProviderDashboard() {
 
     setUploadProgress(100);
 
-    // 🔥 ADD BLOCKCHAIN CALL HERE
+    //  ADD BLOCKCHAIN CALL HERE
     let blockchainDocId = null;
 
     try {
@@ -126,7 +126,7 @@ export default function ProviderDashboard() {
       console.error("Blockchain addDocument failed:", chainErr);
     }
 
-    // 🔥 THEN CREATE newUpload USING docId
+    //  THEN CREATE newUpload USING docId
     const newUpload = {
       id: data.record._id,
       docId: blockchainDocId,   // <-- saved here
@@ -139,7 +139,7 @@ export default function ProviderDashboard() {
       accessStatus: "pending",
     };
 
-    // 🔥 UPDATE UI
+    //  UPDATE UI
     setUploads(prev => [newUpload, ...prev]);
 
     setTxStatus({ type: "success", msg: "✓ File uploaded + stored on blockchain." });
@@ -362,10 +362,10 @@ useEffect(() => {
               {/* Pipeline explainer */}
               <div className="pipeline-steps">
                 {[
-                  { step: '1', label: 'AES-256 Encrypt', icon: '🔐' },
-                  { step: '2', label: 'Upload to IPFS', icon: '📦' },
-                  { step: '3', label: 'Store Hash On-Chain', icon: '⛓' },
-                  { step: '4', label: 'Patient Notified', icon: '🔔' },
+                  { step: '1', label: 'AES-256 Encrypt', icon: '' },
+                  { step: '2', label: 'Upload to IPFS', icon: '' },
+                  { step: '3', label: 'Store Hash On-Chain', icon: '' },
+                  { step: '4', label: 'Patient Notified', icon: '' },
                 ].map((s, i) => (
                   <React.Fragment key={s.step}>
                     <div className="pipe-step">

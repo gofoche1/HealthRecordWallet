@@ -13,11 +13,10 @@ export default function Landing() {
   const navigate = useNavigate();
 
   // After wallet connects, route to the selected portal
-  const handleConnect = async () => {
-    if (!role) return;
-    await connectWallet();
-    // connectWallet sets account; navigate after a tick
-  };
+const handleConnect = async () => {
+  if (!role) return;
+  await connectWallet(role); // <-- this is all that was missing
+};
 
   // Watch for successful connection then redirect
   React.useEffect(() => {
@@ -107,10 +106,10 @@ export default function Landing() {
         {/* Feature strip */}
         <div className="feature-strip fade-up delay-4">
           {[
-            { icon: '🔐', label: 'End-to-end Encrypted' },
-            { icon: '⛓',  label: 'On-chain Consent'     },
-            { icon: '📦', label: 'IPFS Storage'          },
-            { icon: '👁',  label: 'Audit Trail'           },
+            { icon: '', label: 'End-to-end Encrypted' },
+            { icon: '',  label: 'On-chain Consent'     },
+            { icon: '', label: 'IPFS Storage'          },
+            { icon: '',  label: 'Audit Trail'           },
           ].map(f => (
             <div key={f.label} className="feature-pill">
               <span>{f.icon}</span>
