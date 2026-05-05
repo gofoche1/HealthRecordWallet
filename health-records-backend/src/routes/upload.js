@@ -73,4 +73,31 @@ router.get("/records/:userId", async (req, res) => {
     });
   }
 });
+
+router.patch("/records/:recordId/docId", async (req, res) => {
+  try {
+    const { recordId } = req.params;
+    const { docId } = req.body;
+
+    const record = await Record.findByIdAndUpdate(
+      recordId,
+      { docId },
+      { new: true }
+    );
+
+    if (!record) {
+      return res.status(404).json({ error: "Record not found" });
+    }
+
+    return res.status(200).json({
+      message: "docId saved successfully",
+      record,
+    });
+  } catch (error) {
+    return res.status(500).json({
+      error: "Failed to save docId",
+      details: error.message,
+    });
+  }
+});
 export default router;

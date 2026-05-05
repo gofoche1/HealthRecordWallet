@@ -62,8 +62,9 @@ export default function ProviderDashboard() {
       try {
         const API_BASE_URL = "http://localhost:5050";
        const userId = patientAddr;
-
-        const res = await fetch(`${API_BASE_URL}/api/records/${userId}`);
+        const TEST_PATIENT_WALLET = "0xbd957bE270138636908C48542442a40f4B48F239".toLowerCase();
+        const res = await fetch(`${API_BASE_URL}/api/records/${TEST_PATIENT_WALLET}`);
+       // const res = await fetch(`${API_BASE_URL}/api/records/${userId}`);
         const data = await res.json();
 
         const mapped = data.records.map(record => ({
@@ -117,15 +118,20 @@ export default function ProviderDashboard() {
     // 🔥 ADD BLOCKCHAIN CALL HERE
     let blockchainDocId = null;
 
-    try {
-    blockchainDocId = await addDocument(
-    patientAddr,
-    data.record.encryptedFileCid
-);
- 
-    } catch (chainErr) {
-      console.error("Blockchain addDocument failed:", chainErr);
-    }
+      try {
+        blockchainDocId = await addDocument(
+          patientAddr,
+          data.record.encryptedFileCid
+        );
+
+        await fetch(`http://localhost:5050/api/records/${data.record._id}/docId`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ docId: blockchainDocId }),
+        });
+      } catch (chainErr) {
+        console.error("Blockchain addDocument failed:", chainErr);
+      }
 
     // 🔥 THEN CREATE newUpload USING docId
     const newUpload = {

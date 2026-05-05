@@ -99,7 +99,6 @@ useEffect(() => {
   setTxStatus({ type: "loading", msg: "Approving access request…" });
 
   try {
-    // 1. Backend approval
     const res = await fetch(`${API_BASE_URL}/api/consent/approve`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -112,8 +111,15 @@ useEffect(() => {
       throw new Error(data.details || data.error || "Approval failed");
     }
 
-    // 2. Blockchain approval
     const record = records.find(r => r.id === recordId);
+
+    console.log("Before blockchain grant:", {
+      recordId,
+      requestId,
+      providerAddress,
+      record,
+      docId: record?.docId,
+    });
 
     if (record?.docId !== undefined && providerAddress) {
       await grantAccess(record.docId, providerAddress);
@@ -124,7 +130,6 @@ useEffect(() => {
       });
     }
 
-    // 3. Update UI
     setRequests(prev =>
       prev.map(req =>
         req.id === requestId ? { ...req, status: "granted" } : req

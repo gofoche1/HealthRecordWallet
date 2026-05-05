@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
 import { ethers } from 'ethers';
 import ABI from '../contracts/HealthWalletABI.json';
-const  CONTRACT_ADDRESS = "0xe9d9739a3797C747761610345840859B0C0e8ff2";
+const  CONTRACT_ADDRESS = "0x47f341fc6dF7fEf42B6fC16Ac55d79De1f97ca76";
 const WalletContext = createContext(null);
 
 export function WalletProvider({ children }) {
@@ -39,16 +39,35 @@ export function WalletProvider({ children }) {
   }, [getContract]);
 
   // Grant access — called from Patient dashboard
- const grantAccess = async (docId, provider) => {
-  const tx = await contract.grantAccess(docId, provider);
-  await tx.wait();
-};
+ const grantAccess = useCallback(async (docId, providerAddress) => {
+  if (!signer) throw new Error("Wallet not connected");
 
-  // Revoke access — called from Patient dashboard
-  const revokeAccess = async (docId, provider) => {
-  const tx = await contract.revokeAccess(docId, provider);
+  const contract = getContract(signer);
+
+  console.log("Calling blockchain grantAccess:", {
+    docId,
+    providerAddress,
+  });
+
+  const tx = await contract.grantAccess(docId, providerAddress);
   await tx.wait();
-};
+
+  console.log("Blockchain grant confirmed:", tx.hash);
+
+  return tx.hash;
+}, [signer, getContract]);
+
+
+// Revoke access — called from Patient dashboard
+const revokeAccess = useCallback(async (docId, providerAddress) => {
+  if (!signer) throw new Error("Wallet not connected");
+
+  const contract = getContract(signer);
+  const tx = await contract.revokeAccess(docId, providerAddress);
+  await tx.wait();
+
+  return tx.hash;
+}, [signer, getContract]);
 
   const connectWallet = useCallback(async (selectedRole) => {
     setError(null);
@@ -98,6 +117,13 @@ export function WalletProvider({ children }) {
   return Number(currentCount);
 }, [signer, getContract]);
 
+useEffect(() => {
+  if (provider) {
+    provider.getNetwork().then(net => {
+      console.log("Connected network:", net);
+    });
+  }
+}, [provider]);
 
     const value = {
     account,

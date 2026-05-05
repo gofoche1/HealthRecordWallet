@@ -12,6 +12,7 @@ const recordSchema = new mongoose.Schema(
     originalFileName: { type: String, required: true },
     mimeType: { type: String, required: true },
     fileSize: { type: Number, required: true },
+    docId: { type: Number },
   },
   { timestamps: true }
 );
