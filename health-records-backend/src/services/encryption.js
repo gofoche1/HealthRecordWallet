@@ -22,4 +22,14 @@ export function encryptBuffer(buffer) {
     encryptedBuffer: encrypted,
     iv: iv.toString("hex"),
   };
+
+  
+}export function decryptBuffer(encryptedBuffer, ivHex) {
+  const iv = Buffer.from(ivHex, "hex");
+  const decipher = crypto.createDecipheriv(ALGORITHM, KEY, iv);
+
+  return Buffer.concat([
+    decipher.update(encryptedBuffer),
+    decipher.final(),
+  ]);
 }

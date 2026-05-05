@@ -5,6 +5,7 @@ import { File } from "node:buffer";
 import { encryptBuffer } from "../services/encryption.js";
 import { pinata } from "../services/pinata.js";
 import Record from "../models/Record.js";
+import { decryptBuffer } from "../services/encryption.js";
 
 const router = express.Router();
 const upload = multer({ storage: multer.memoryStorage() });
@@ -38,6 +39,7 @@ const result = await pinata.upload.public.file(encryptedFile);
       originalFileName: req.file.originalname,
       mimeType: req.file.mimetype,
       fileSize: req.file.size,
+      iv,
     });
 
     return res.status(200).json({
@@ -96,6 +98,51 @@ router.patch("/records/:recordId/docId", async (req, res) => {
   } catch (error) {
     return res.status(500).json({
       error: "Failed to save docId",
+      details: error.message,
+    });
+  }
+});
+
+router.get("/records/:recordId/download", async (req, res) => {
+  try {
+    const { recordId } = req.params;
+
+    const record = await Record.findById(recordId);
+
+    if (!record) {
+      return res.status(404).json({ error: "Record not found" });
+    }
+
+    if (!record.iv) {
+      return res.status(400).json({
+        error: "Missing IV for this record. Re-upload the file after IV storage is added.",
+      });
+    }
+
+    const ipfsUrl = `https://gateway.pinata.cloud/ipfs/${record.encryptedFileCid}`;
+
+    const response = await fetch(ipfsUrl);
+
+    if (!response.ok) {
+      throw new Error("Failed to fetch encrypted file from IPFS");
+    }
+
+    const encryptedArrayBuffer = await response.arrayBuffer();
+    const encryptedBuffer = Buffer.from(encryptedArrayBuffer);
+
+    const decryptedBuffer = decryptBuffer(encryptedBuffer, record.iv);
+
+    res.setHeader("Content-Type", record.mimeType);
+    res.setHeader(
+      "Content-Disposition",
+      `attachment; filename="${record.originalFileName}"`
+    );
+
+    return res.send(decryptedBuffer);
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({
+      error: "Failed to download/decrypt file",
       details: error.message,
     });
   }

@@ -6,6 +6,7 @@ const recordSchema = new mongoose.Schema(
   type: String,
   required: true,
 },
+iv: { type: String, required: true },
     title: { type: String, required: true },
     recordType: { type: String, default: "medical" },
     encryptedFileCid: { type: String, required: true },
