@@ -1,57 +1,118 @@
-# Sample Hardhat 3 Beta Project (`mocha` and `ethers`)
+# CypherCare
 
-This project showcases a Hardhat 3 Beta project using `mocha` for tests and the `ethers` library for Ethereum interactions.
+A decentralized health record management system that combines blockchain with off-chain storage (MongoDB + IPFS) to securely manage and share patient data.
 
-To learn more about the Hardhat 3 Beta, please visit the [Getting Started guide](https://hardhat.org/docs/getting-started#getting-started-with-hardhat-3). To share your feedback, join our [Hardhat 3 Beta](https://hardhat.org/hardhat3-beta-telegram-group) Telegram group or [open an issue](https://github.com/NomicFoundation/hardhat/issues/new) in our GitHub issue tracker.
+## Overview
 
-## Project Overview
+CypherCare allows:
 
-This example project includes:
+- Patients to manage health records
+- Providers to upload/request access to records
+- Patients to grant/revoke access securely
+- Smart contracts to enforce permissions on-chain
 
-- A simple Hardhat configuration file.
-- Foundry-compatible Solidity unit tests.
-- TypeScript integration tests using `mocha` and ethers.js
-- Examples demonstrating how to connect to different types of networks, including locally simulating OP mainnet.
+## Tech Stack
 
-## Usage
+- **Frontend:** React
+- **Backend:** Node.js, Express
+- **Database:** MongoDB
+- **Blockchain:** Sepolia Testnet
+- **Smart Contracts:** Solidity 
+- **Storage:** IPFS (Pinata)
 
-### Running Tests
+## Setup Instructions
 
-To run all the tests in the project, execute the following command:
+### 1. Clone the repo
 
-```shell
-npx hardhat test
+```bash
+git clone https://github.com/gofoche1/HealthRecordWallet
+cd HealthRecordWallet
 ```
 
-You can also selectively run the Solidity or `mocha` tests:
+### 2. Install dependencies
 
-```shell
-npx hardhat test solidity
-npx hardhat test mocha
+#### Backend
+
+```bash
+cd health-records-backend
+npm install
 ```
 
-### Make a deployment to Sepolia
+#### Frontend
 
-This project includes an example Ignition module to deploy the contract. You can deploy this module to a locally simulated chain or to Sepolia.
-
-To run the deployment to a local chain:
-
-```shell
-npx hardhat ignition deploy ignition/modules/Counter.ts
+```bash
+cd ../frontend
+npm install
 ```
 
-To run the deployment to Sepolia, you need an account with funds to send the transaction. The provided Hardhat configuration includes a Configuration Variable called `SEPOLIA_PRIVATE_KEY`, which you can use to set the private key of the account you want to use.
+### 3. Setup environment variables
 
-You can set the `SEPOLIA_PRIVATE_KEY` variable using the `hardhat-keystore` plugin or by setting it as an environment variable.
+Create a `.env` file inside `health-records-backend/`
 
-To set the `SEPOLIA_PRIVATE_KEY` config variable using `hardhat-keystore`:
+Add the following:
 
-```shell
-npx hardhat keystore set SEPOLIA_PRIVATE_KEY
+```env
+PORT=5000
+MONGODB_URI=your_mongodb_connection_string
+FILE_ENCRYPTION_KEY=your_generated_key
+PINATA_JWT=your_pinata_jwt
 ```
 
-After setting the variable, you can run the deployment with the Sepolia network:
+> **Note:** Environment variables are not included for security reasons. Please generate your own or request them from one of the team members.
 
-```shell
-npx hardhat ignition deploy --network sepolia ignition/modules/Counter.ts
+### 4. Run the backend
+
+```bash
+cd health-records-backend
+npm run dev
 ```
+
+You should see:
+
+```
+MongoDB connected
+Server running on http://localhost:5000
+```
+
+### 5. Run the frontend
+
+```bash
+cd frontend
+npm start
+```
+
+Open: [http://localhost:3000](http://localhost:3000)
+
+## Smart Contract
+
+The smart contract is already deployed on Sepolia:
+
+```
+0x47f341fc6dF7fEf42B6fC16Ac55d79De1f97ca76
+```
+
+## CypherCare Features
+
+- Upload health records (stored via IPFS)
+- Request access (provider → patient)
+- Grant/Revoke access (on chain)
+- View access history
+- Secure encryption for files
+
+## Notes
+
+- MetaMask must be connected to Sepolia
+- Backend must be running for API requests
+- Frontend uses `http://localhost:5000` for API calls
+- MongoDB is used for request tracking and metadata
+
+## Team
+
+- Alazar Tekeba
+- Glorie Ofoche
+- Boluwatife Afariogun
+
+## Possible Future Improvements
+
+- Full on-chain request system
+- Real-time notifications
