@@ -88,9 +88,18 @@ router.post("/request", async (req, res) => {
   try {
     const { patientId, granteeId, recordId } = req.body;
 
+    console.log("REQUEST BODY:", req.body);
+
+    if (!patientId || !granteeId || !recordId) {
+      return res.status(400).json({
+        error: "Missing required fields",
+        received: req.body,
+      });
+    }
+
     const request = await Consent.create({
-      patientId,
-      granteeId,
+      patientId: patientId.toLowerCase(),
+      granteeId: granteeId.toLowerCase(),
       recordId,
       status: "pending",
     });
@@ -100,6 +109,8 @@ router.post("/request", async (req, res) => {
       request,
     });
   } catch (error) {
+    console.error("CONSENT REQUEST ERROR:", error);
+
     return res.status(500).json({
       error: "Failed to create access request",
       details: error.message,
@@ -112,10 +123,10 @@ router.get("/requests/:patientId", async (req, res) => {
   try {
     const { patientId } = req.params;
 
-    const requests = await Consent.find({
-      patientId,
-      status: "pending",
-    }).populate("recordId");
+   const requests = await Consent.find({
+  patientId: patientId.toLowerCase(),
+  status: "pending",
+}).populate("recordId");
 
     return res.status(200).json({
       message: "Pending requests fetched successfully",
@@ -165,10 +176,11 @@ router.get("/history/:patientId", async (req, res) => {
   try {
     const { patientId } = req.params;
 
-    const history = await Consent.find({ patientId })
-      .populate("recordId")
-      .sort({ createdAt: -1 });
-
+    const history = await Consent.find({
+        patientId: patientId.toLowerCase(),
+        })
+        .populate("recordId")
+        .sort({ createdAt: -1 });
     return res.status(200).json({
       message: "Consent history fetched successfully",
       count: history.length,

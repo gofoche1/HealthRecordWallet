@@ -2,14 +2,14 @@ import mongoose from "mongoose";
 
 const consentSchema = new mongoose.Schema(
   {
-      patientId: {
-      type: String,
-      required: true,
-    },
-    granteeId: {
-      type: String,
-      required: true,
-    },
+    patientId: {
+  type: String,
+  required: true,
+},
+  granteeId: {
+    type: String,
+    required: true,
+  },
 
     recordId: {
       type: mongoose.Schema.Types.ObjectId,
