@@ -3,10 +3,9 @@ import mongoose from "mongoose";
 const recordSchema = new mongoose.Schema(
   {
     userId: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "User",
-      required: true,
-    },
+  type: String,
+  required: true,
+},
     title: { type: String, required: true },
     recordType: { type: String, default: "medical" },
     encryptedFileCid: { type: String, required: true },

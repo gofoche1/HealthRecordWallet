@@ -19,7 +19,7 @@ export default function PatientDashboard() {
   const [history, setHistory] = useState([]);
   
   const API_BASE_URL = "http://localhost:5050";
-  const PATIENT_ID = "64f123abc123abc123abc123";
+  const PATIENT_ID = account?.toLowerCase();
 
   useEffect(() => {
     if (!isConnected) navigate("/");

@@ -61,7 +61,7 @@ export default function ProviderDashboard() {
     async function fetchUploads() {
       try {
         const API_BASE_URL = "http://localhost:5050";
-        const userId = "64f123abc123abc123abc123";
+       const userId = patientAddr;
 
         const res = await fetch(`${API_BASE_URL}/api/records/${userId}`);
         const data = await res.json();
@@ -98,7 +98,7 @@ export default function ProviderDashboard() {
 
     const formData = new FormData();
     formData.append("file", uploadFile);
-    formData.append("userId", patientAddr);
+    formData.append("userId", patientAddr); 
     formData.append("title", uploadFile.name);
 
     const response = await fetch(`${API_BASE_URL}/api/upload`, {
@@ -118,10 +118,11 @@ export default function ProviderDashboard() {
     let blockchainDocId = null;
 
     try {
-      blockchainDocId = await addDocument(
-        account, // MUST be wallet address
-        data.record.encryptedFileCid
-      );
+    blockchainDocId = await addDocument(
+    patientAddr,
+    data.record.encryptedFileCid
+);
+ 
     } catch (chainErr) {
       console.error("Blockchain addDocument failed:", chainErr);
     }
@@ -156,33 +157,33 @@ export default function ProviderDashboard() {
   }
 };
 
-  const handleRequestAccess = async (uploadId, patientId) => {
-    setTxStatus({ type: "loading", msg: "Sending access request…" });
+ const handleRequestAccess = async (uploadId, patientId) => {
+  setTxStatus({ type: "loading", msg: "Sending access request…" });
 
-    try {
-      const res = await fetch("http://localhost:5050/api/consent/request", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          patientId: patientId,
-          granteeId: account.toLowerCase(),
-          recordId: uploadId,
-        }),
-      });
+  try {
+    const res = await fetch("http://localhost:5050/api/consent/request", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        patientId: patientId.toLowerCase(),
+        granteeId: account.toLowerCase(),
+        recordId: uploadId,
+      }),
+    });
 
-      const data = await res.json();
+    const data = await res.json();
 
-      if (!res.ok) {
-        throw new Error(data.details || data.error || "Request failed");
-      }
-
-      setTxStatus({ type: "success", msg: "✓ Access request sent to patient." });
-    } catch (err) {
-      setTxStatus({ type: "error", msg: `Request failed: ${err.message}` });
+    if (!res.ok) {
+      throw new Error(data.details || data.error || "Request failed");
     }
 
-    setTimeout(() => setTxStatus(null), 4000);
-  };
+    setTxStatus({ type: "success", msg: "✓ Access request sent to patient." });
+  } catch (err) {
+    setTxStatus({ type: "error", msg: `Request failed: ${err.message}` });
+  }
+
+  setTimeout(() => setTxStatus(null), 4000);
+};
 
 const refreshBackendAccessStatus = async () => {
   try {

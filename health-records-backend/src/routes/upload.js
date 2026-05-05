@@ -15,8 +15,7 @@ router.post("/upload", upload.single("file"), async (req, res) => {
       return res.status(400).json({ error: "No file uploaded" });
     }
 
-    const userId = req.body.userId;
-
+    const userId = req.body.userId.toLowerCase();
     if (!userId) {
       return res.status(400).json({ error: "userId is required" });
     }
