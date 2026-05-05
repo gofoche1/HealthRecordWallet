@@ -1,57 +1,93 @@
-# Sample Hardhat 3 Beta Project (`mocha` and `ethers`)
+CypherCare
+A decentralized health record management system that combines blockchain with off-chain storage (MongoDB + IPFS) to securely manage and share patient data.
 
-This project showcases a Hardhat 3 Beta project using `mocha` for tests and the `ethers` library for Ethereum interactions.
+Overview
+CypherCare allows:
+Patients to manage health records
+Providers to upload/request access to records
+Patients to grant/revoke access securely
+Smart contracts to enforce permissions on-chain
 
-To learn more about the Hardhat 3 Beta, please visit the [Getting Started guide](https://hardhat.org/docs/getting-started#getting-started-with-hardhat-3). To share your feedback, join our [Hardhat 3 Beta](https://hardhat.org/hardhat3-beta-telegram-group) Telegram group or [open an issue](https://github.com/NomicFoundation/hardhat/issues/new) in our GitHub issue tracker.
+Tech Stack
+Frontend: React
+Backend: Node.js, Express
+Database: MongoDB
+Blockchain: Sepolia Testnet
+Smart Contracts: Solidity 
+Storage: IPFS (Pinata)
 
-## Project Overview
+⚙️ Setup Instructions
+1. Clone the repo
+git clone https://github.com/gofoche1/HealthRecordWallet
+cd HealthRecordWallet
 
-This example project includes:
 
-- A simple Hardhat configuration file.
-- Foundry-compatible Solidity unit tests.
-- TypeScript integration tests using `mocha` and ethers.js
-- Examples demonstrating how to connect to different types of networks, including locally simulating OP mainnet.
+2. Install dependencies
+Backend
+cd health-records-backend
+npm install
 
-## Usage
+Frontend
+cd ../frontend
+npm install
 
-### Running Tests
 
-To run all the tests in the project, execute the following command:
+3. Setup environment variables
+Create a .env file inside
+health-records-backend/
 
-```shell
-npx hardhat test
-```
+Add:
+PORT=5000
+MONGODB_URI=your_mongodb_connection_string
+FILE_ENCRYPTION_KEY=your_generated_key
+PINATA_JWT=your_pinata_jwt
 
-You can also selectively run the Solidity or `mocha` tests:
+Note: Environment variables are not included for security reasons. Please generate your own or request them from one of the teammembers
 
-```shell
-npx hardhat test solidity
-npx hardhat test mocha
-```
 
-### Make a deployment to Sepolia
+4. Run the backend
+cd health-records-backend
+npm run dev
 
-This project includes an example Ignition module to deploy the contract. You can deploy this module to a locally simulated chain or to Sepolia.
+You should see:
+MongoDB connected
+Server running on http://localhost:5000
 
-To run the deployment to a local chain:
 
-```shell
-npx hardhat ignition deploy ignition/modules/Counter.ts
-```
+5. Run the frontend
+cd frontend
+npm start
 
-To run the deployment to Sepolia, you need an account with funds to send the transaction. The provided Hardhat configuration includes a Configuration Variable called `SEPOLIA_PRIVATE_KEY`, which you can use to set the private key of the account you want to use.
+Open:
+http://localhost:3000
 
-You can set the `SEPOLIA_PRIVATE_KEY` variable using the `hardhat-keystore` plugin or by setting it as an environment variable.
 
-To set the `SEPOLIA_PRIVATE_KEY` config variable using `hardhat-keystore`:
+Smart Contract
+The smart contract is already on Sepolia:
+0x47f341fc6dF7fEf42B6fC16Ac55d79De1f97ca76
 
-```shell
-npx hardhat keystore set SEPOLIA_PRIVATE_KEY
-```
 
-After setting the variable, you can run the deployment with the Sepolia network:
+CypherCare Features
+Upload health records (stored via IPFS)
+Request access (provider -> patient)
+Grant/Revoke access (on chain)
+View access history
+Secure encryption for files
 
-```shell
-npx hardhat ignition deploy --network sepolia ignition/modules/Counter.ts
-```
+Notes
+MetaMask must be connected to Sepolia
+Backend must be running for API requests
+Frontend uses http://localhost:5000 for API calls
+MongoDB is used for request tracking and metadata
+
+
+Team
+Alazar Tekeba
+Glorie Ofoche
+Boluwatife Afariogun
+
+Possible Future Improvements
+Full on chain request system
+Real-time notifications
+
+
